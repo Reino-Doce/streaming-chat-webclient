@@ -12,6 +12,28 @@ From this package folder:
 npx electron src/main.cjs --host 127.0.0.1 --port 5443 --token my-token --autoconnect true
 ```
 
+## Embed In Another Electron App
+
+Import the package in your Electron main process and create the dock window on demand.
+
+```js
+const { app } = require("electron");
+const { createChatDockWindow } = require("@reino-doce/streaming-chat-webclient-gui");
+
+app.whenReady().then(() => {
+  createChatDockWindow({
+    query: {
+      host: "127.0.0.1",
+      port: "5443",
+      token: "my-token",
+      autoconnect: "1",
+    },
+  });
+});
+```
+
+The package entry no longer auto-starts when imported. Standalone behavior is still available when running `src/main.cjs` directly with Electron.
+
 ## Launch Options
 
 - `--host <host>`
