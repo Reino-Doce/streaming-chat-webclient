@@ -4,6 +4,12 @@ Reusable WebSocket/XMPP client used by Chat Dock tools.
 
 Repository: https://github.com/Reino-Doce/streaming-chat-webclient
 
+## Workspace Packages
+
+- Core package: `@reino-doce/streaming-chat-webclient`
+- CLI companion: `@reino-doce/streaming-chat-webclient-cli` (English-only output/help)
+- GUI companion: `@reino-doce/streaming-chat-webclient-gui` (localized UI: `en`, `pt-BR`)
+
 ## Install
 
 ```bash

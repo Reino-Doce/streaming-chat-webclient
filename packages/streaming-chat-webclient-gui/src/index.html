@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -171,14 +171,16 @@
       }
 
       .zoom-tools,
-      .transparency-tools {
+      .transparency-tools,
+      .language-tools {
         display: inline-flex;
         align-items: center;
         gap: 6px;
       }
 
       .zoom-tools .label,
-      .transparency-tools .label {
+      .transparency-tools .label,
+      .language-tools .label {
         font-size: 11px;
         color: var(--muted);
       }
@@ -230,6 +232,25 @@
 
       input:focus {
         border-color: var(--accent);
+      }
+
+      select {
+        min-width: 0;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 8px;
+        color: var(--text);
+        padding: 6px 8px;
+        font-size: 12px;
+        outline: none;
+      }
+
+      select:focus {
+        border-color: var(--accent);
+      }
+
+      .language-select {
+        min-width: 110px;
       }
 
       button {
@@ -359,44 +380,51 @@
       <header class="titlebar">
         <div class="title">
           <span class="title-icon" aria-hidden="true"></span>
-          <span>Chat Dock</span>
+          <span id="titleText">Chat Dock</span>
         </div>
         <div class="actions">
-          <span id="status" class="status warn">Desconectado</span>
-          <button id="settingsBtn" type="button" class="settings-btn" title="Configuracoes">⚙</button>
-          <button id="clearBtn" type="button" class="settings-btn" title="Limpar mensagens">C</button>
-          <button id="closeBtn" type="button" class="close-btn" title="Fechar">✕</button>
+          <span id="status" class="status warn">Disconnected</span>
+          <button id="settingsBtn" type="button" class="settings-btn" title="Settings">⚙</button>
+          <button id="clearBtn" type="button" class="settings-btn" title="Clear messages">C</button>
+          <button id="closeBtn" type="button" class="close-btn" title="Close">✕</button>
         </div>
       </header>
 
       <section class="controls">
         <div class="controls-row">
           <input id="host" type="text" placeholder="Host (127.0.0.1)" />
-          <input id="port" type="number" min="1" max="65535" step="1" placeholder="Porta" />
+          <input id="port" type="number" min="1" max="65535" step="1" placeholder="Port" />
           <input id="token" type="text" placeholder="Token" />
-          <button id="connectBtn" type="button">Conectar</button>
+          <button id="connectBtn" type="button">Connect</button>
         </div>
         <div class="prefs-row">
           <div class="zoom-tools">
-            <span class="label">Zoom chat</span>
-            <button id="fontDownBtn" class="pref-btn" type="button" title="Diminuir">A-</button>
+            <span id="zoomLabel" class="label">Chat zoom</span>
+            <button id="fontDownBtn" class="pref-btn" type="button" title="Decrease">A-</button>
             <span id="zoomValue" class="zoom-value">100%</span>
-            <button id="fontUpBtn" class="pref-btn" type="button" title="Aumentar">A+</button>
+            <button id="fontUpBtn" class="pref-btn" type="button" title="Increase">A+</button>
           </div>
           <div class="transparency-tools">
-            <span class="label">Transparencia</span>
+            <span id="transparencyLabel" class="label">Transparency</span>
             <input id="transparencyRange" class="range-inline" type="range" min="0" max="80" step="5" />
             <span id="transparencyValue" class="zoom-value">0%</span>
           </div>
+          <div class="language-tools">
+            <label id="languageLabel" class="label" for="languageSelect">Language</label>
+            <select id="languageSelect" class="language-select">
+              <option value="en">English</option>
+              <option value="pt-BR">Portugues</option>
+            </select>
+          </div>
           <label class="toggle-inline" for="showTimestampToggle">
             <input id="showTimestampToggle" type="checkbox" checked />
-            Mostrar horario
+            <span id="showTimestampLabel">Show timestamp</span>
           </label>
         </div>
       </section>
 
       <ul id="messages" class="messages"></ul>
-      <div id="resizeGrip" class="resize-grip" title="Redimensionar"></div>
+      <div id="resizeGrip" class="resize-grip" title="Resize"></div>
     </main>
 
     <script src="./renderer.js"></script>

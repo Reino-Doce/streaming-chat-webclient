@@ -16,6 +16,8 @@ npm install @reino-doce/streaming-chat-webclient-cli
 streaming-chat-webclient connect --host 127.0.0.1 --port 5443 --token my-token
 ```
 
+CLI help/output is intentionally English-only. 
+
 ## Options
 
 - `--host <host>`

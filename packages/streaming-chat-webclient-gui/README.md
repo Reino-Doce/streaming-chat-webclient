@@ -19,6 +19,16 @@ npx electron src/main.cjs --host 127.0.0.1 --port 5443 --token my-token --autoco
 - `--token <token>`
 - `--autoconnect <true|false>`
 
+## Localization
+
+- GUI supports `en` and `pt-BR`.
+- Locale selection priority:
+  1. URL query param `lang` (for embedded/custom launch flows)
+  2. Saved GUI preference
+  3. System/browser locale
+- Users can switch language from the settings panel (`Language` selector).
+- Current packaged launch options do not expose a direct `--lang` flag.
+
 ## Environment Fallbacks
 
 - `RD_CHAT_DOCK_HOST`

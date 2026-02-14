@@ -7,6 +7,78 @@ const TRANSPARENCY_MIN = 0;
 const TRANSPARENCY_MAX = 80;
 const DOCK_MIN_WIDTH = 380;
 const DOCK_MIN_HEIGHT = 240;
+const FALLBACK_LOCALE = "en";
+
+const TRANSLATIONS = {
+  en: {
+    appTitle: "Chat Dock",
+    actionSettings: "Settings",
+    actionHideSettings: "Hide settings",
+    actionClose: "Close",
+    actionClearMessages: "Clear messages",
+    actionConnect: "Connect",
+    actionDisconnect: "Disconnect",
+    labelZoom: "Chat zoom",
+    labelTransparency: "Transparency",
+    labelShowTimestamp: "Show timestamp",
+    labelLanguage: "Language",
+    languageEnglish: "English",
+    languagePortuguese: "Portuguese",
+    placeholderHost: "Host (127.0.0.1)",
+    placeholderPort: "Port",
+    placeholderToken: "Token",
+    tooltipFontDown: "Decrease",
+    tooltipFontUp: "Increase",
+    tooltipResize: "Resize",
+    statusDisconnected: "Disconnected",
+    statusConnected: "Connected",
+    statusNetworkError: "Network error",
+    statusAuthenticating: "Authenticating...",
+    statusBinding: "Binding session...",
+    statusSocketOpen: "Socket open",
+    statusConnecting: "Connecting...",
+    statusInvalidConfig: "Invalid config",
+    statusClientUnavailable: "Client unavailable",
+    systemReady: "Dock ready. Use settings (⚙) to edit connection.",
+    systemClientUnavailable: "Chat client is unavailable in this window.",
+    systemConnectedTo: "Connected to {url}",
+    unknownAuthor: "unknown",
+  },
+  "pt-BR": {
+    appTitle: "Chat Dock",
+    actionSettings: "Configuracoes",
+    actionHideSettings: "Ocultar configuracoes",
+    actionClose: "Fechar",
+    actionClearMessages: "Limpar mensagens",
+    actionConnect: "Conectar",
+    actionDisconnect: "Desconectar",
+    labelZoom: "Zoom chat",
+    labelTransparency: "Transparencia",
+    labelShowTimestamp: "Mostrar horario",
+    labelLanguage: "Idioma",
+    languageEnglish: "Ingles",
+    languagePortuguese: "Portugues",
+    placeholderHost: "Host (127.0.0.1)",
+    placeholderPort: "Porta",
+    placeholderToken: "Token",
+    tooltipFontDown: "Diminuir",
+    tooltipFontUp: "Aumentar",
+    tooltipResize: "Redimensionar",
+    statusDisconnected: "Desconectado",
+    statusConnected: "Conectado",
+    statusNetworkError: "Erro de rede",
+    statusAuthenticating: "Autenticando...",
+    statusBinding: "Vinculando sessao...",
+    statusSocketOpen: "Socket aberto",
+    statusConnecting: "Conectando...",
+    statusInvalidConfig: "Config invalida",
+    statusClientUnavailable: "Cliente indisponivel",
+    systemReady: "Dock pronto. Use o botao de configuracoes (⚙) para editar conexao.",
+    systemClientUnavailable: "Cliente de chat indisponivel nesta janela.",
+    systemConnectedTo: "Conectado em {url}",
+    unknownAuthor: "desconhecido",
+  },
+};
 
 const clientApi = window.chatDockClient && typeof window.chatDockClient === "object"
   ? window.chatDockClient
@@ -14,6 +86,7 @@ const clientApi = window.chatDockClient && typeof window.chatDockClient === "obj
 
 const elements = {
   dock: document.querySelector(".dock"),
+  titleText: document.getElementById("titleText"),
   host: document.getElementById("host"),
   port: document.getElementById("port"),
   token: document.getElementById("token"),
@@ -23,10 +96,15 @@ const elements = {
   clearBtn: document.getElementById("clearBtn"),
   fontDownBtn: document.getElementById("fontDownBtn"),
   fontUpBtn: document.getElementById("fontUpBtn"),
+  zoomLabel: document.getElementById("zoomLabel"),
   zoomValue: document.getElementById("zoomValue"),
+  transparencyLabel: document.getElementById("transparencyLabel"),
   transparencyRange: document.getElementById("transparencyRange"),
   transparencyValue: document.getElementById("transparencyValue"),
+  languageLabel: document.getElementById("languageLabel"),
+  languageSelect: document.getElementById("languageSelect"),
   showTimestampToggle: document.getElementById("showTimestampToggle"),
+  showTimestampLabel: document.getElementById("showTimestampLabel"),
   status: document.getElementById("status"),
   messages: document.getElementById("messages"),
   resizeGrip: document.getElementById("resizeGrip"),
@@ -35,6 +113,7 @@ const elements = {
 const state = {
   connectionState: "disconnected",
   settingsOpen: false,
+  locale: FALLBACK_LOCALE,
   chatScale: 1,
   transparencyPercent: 0,
   showTimestamp: true,
@@ -65,6 +144,7 @@ function readUrlSettings() {
     host: String(query.get("host") || "").trim(),
     port: hasPort ? Math.max(1, Math.min(65535, rawPort)) : null,
     token: String(query.get("token") || "").trim(),
+    lang: String(query.get("lang") || "").trim(),
     autoConnect:
       query.get("autoconnect") === "1" ||
       String(query.get("autoconnect") || "").toLowerCase() === "true",
@@ -76,6 +156,7 @@ function saveSettings() {
     host: String(elements.host.value || "").trim(),
     port: Math.max(1, Math.min(65535, Math.floor(Number(elements.port.value || 5443)))),
     token: String(elements.token.value || "").trim(),
+    locale: state.locale,
     chatScale: state.chatScale,
     transparencyPercent: state.transparencyPercent,
     showTimestamp: state.showTimestamp,
@@ -87,6 +168,63 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function normalizeLocale(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return FALLBACK_LOCALE;
+  if (raw.startsWith("pt")) return "pt-BR";
+  if (raw.startsWith("en")) return "en";
+  return FALLBACK_LOCALE;
+}
+
+function t(key, vars = {}) {
+  const localeTable = TRANSLATIONS[state.locale] || TRANSLATIONS[FALLBACK_LOCALE];
+  const fallbackTable = TRANSLATIONS[FALLBACK_LOCALE];
+  const template = localeTable?.[key] || fallbackTable?.[key] || key;
+
+  return String(template).replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
+    Object.prototype.hasOwnProperty.call(vars, token) ? String(vars[token]) : match
+  ));
+}
+
+function applyLocaleToUi() {
+  document.title = t("appTitle");
+  document.documentElement.lang = state.locale;
+
+  if (elements.titleText) elements.titleText.textContent = t("appTitle");
+  if (elements.host) elements.host.placeholder = t("placeholderHost");
+  if (elements.port) elements.port.placeholder = t("placeholderPort");
+  if (elements.token) elements.token.placeholder = t("placeholderToken");
+  if (elements.zoomLabel) elements.zoomLabel.textContent = t("labelZoom");
+  if (elements.transparencyLabel) elements.transparencyLabel.textContent = t("labelTransparency");
+  if (elements.languageLabel) elements.languageLabel.textContent = t("labelLanguage");
+  if (elements.showTimestampLabel) elements.showTimestampLabel.textContent = t("labelShowTimestamp");
+  if (elements.settingsBtn) {
+    elements.settingsBtn.title = state.settingsOpen ? t("actionHideSettings") : t("actionSettings");
+  }
+  if (elements.closeBtn) elements.closeBtn.title = t("actionClose");
+  if (elements.clearBtn) elements.clearBtn.title = t("actionClearMessages");
+  if (elements.fontDownBtn) elements.fontDownBtn.title = t("tooltipFontDown");
+  if (elements.fontUpBtn) elements.fontUpBtn.title = t("tooltipFontUp");
+  if (elements.resizeGrip) elements.resizeGrip.title = t("tooltipResize");
+
+  if (elements.languageSelect) {
+    const englishOption = elements.languageSelect.querySelector("option[value='en']");
+    const portugueseOption = elements.languageSelect.querySelector("option[value='pt-BR']");
+    if (englishOption) englishOption.textContent = t("languageEnglish");
+    if (portugueseOption) portugueseOption.textContent = t("languagePortuguese");
+    elements.languageSelect.value = state.locale;
+  }
+}
+
+function setLocale(locale, { persist = true } = {}) {
+  state.locale = normalizeLocale(locale);
+  applyLocaleToUi();
+  applyStatusSnapshot({ state: state.connectionState });
+  if (persist) {
+    saveSettings();
+  }
+}
+
 function setSettingsVisibility(open) {
   state.settingsOpen = !!open;
   if (elements.dock) {
@@ -94,7 +232,7 @@ function setSettingsVisibility(open) {
   }
   if (elements.settingsBtn) {
     elements.settingsBtn.textContent = state.settingsOpen ? "x" : "⚙";
-    elements.settingsBtn.title = state.settingsOpen ? "Ocultar configuracoes" : "Configuracoes";
+    elements.settingsBtn.title = state.settingsOpen ? t("actionHideSettings") : t("actionSettings");
   }
 }
 
@@ -214,7 +352,7 @@ function setStatus(label, kind) {
 }
 
 function nowTimeLabel() {
-  return new Date().toLocaleTimeString("pt-BR", {
+  return new Date().toLocaleTimeString(state.locale, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -270,43 +408,43 @@ function applyStatusSnapshot(snapshot) {
   state.connectionState = nextState;
 
   if (nextState === "connected") {
-    setStatus("Conectado", "ok");
-    elements.connectBtn.textContent = "Desconectar";
+    setStatus(t("statusConnected"), "ok");
+    elements.connectBtn.textContent = t("actionDisconnect");
     return;
   }
 
   if (nextState === "error") {
-    setStatus("Erro de rede", "err");
-    elements.connectBtn.textContent = "Conectar";
+    setStatus(t("statusNetworkError"), "err");
+    elements.connectBtn.textContent = t("actionConnect");
     return;
   }
 
   if (nextState === "authenticating") {
-    setStatus("Autenticando...", "warn");
-    elements.connectBtn.textContent = "Desconectar";
+    setStatus(t("statusAuthenticating"), "warn");
+    elements.connectBtn.textContent = t("actionDisconnect");
     return;
   }
 
   if (nextState === "binding") {
-    setStatus("Vinculando sessao...", "warn");
-    elements.connectBtn.textContent = "Desconectar";
+    setStatus(t("statusBinding"), "warn");
+    elements.connectBtn.textContent = t("actionDisconnect");
     return;
   }
 
   if (nextState === "socket-open") {
-    setStatus("Socket aberto", "warn");
-    elements.connectBtn.textContent = "Desconectar";
+    setStatus(t("statusSocketOpen"), "warn");
+    elements.connectBtn.textContent = t("actionDisconnect");
     return;
   }
 
   if (nextState === "connecting") {
-    setStatus("Conectando...", "warn");
-    elements.connectBtn.textContent = "Desconectar";
+    setStatus(t("statusConnecting"), "warn");
+    elements.connectBtn.textContent = t("actionDisconnect");
     return;
   }
 
-  setStatus("Desconectado", "warn");
-  elements.connectBtn.textContent = "Conectar";
+  setStatus(t("statusDisconnected"), "warn");
+  elements.connectBtn.textContent = t("actionConnect");
 }
 
 function registerClientListeners() {
@@ -328,7 +466,7 @@ function registerClientListeners() {
 
   if (typeof clientApi.onChat === "function") {
     state.unsubscribers.push(clientApi.onChat((event) => {
-      const author = String(event?.author || "").trim() || "desconhecido";
+      const author = String(event?.author || "").trim() || t("unknownAuthor");
       const message = String(event?.message || "").trim();
       if (!message) return;
       appendRow(message, { author });
@@ -361,8 +499,8 @@ async function disconnect({ silent = false } = {}) {
 
 async function connect() {
   if (!clientApi || typeof clientApi.connect !== "function") {
-    setStatus("Cliente indisponivel", "err");
-    appendRow("Cliente de chat indisponivel nesta janela.", { system: true });
+    setStatus(t("statusClientUnavailable"), "err");
+    appendRow(t("systemClientUnavailable"), { system: true });
     return;
   }
 
@@ -384,7 +522,7 @@ async function connect() {
 
     wsUrl = clientApi.buildWsUrl(options);
   } catch (error) {
-    setStatus("Config invalida", "err");
+    setStatus(t("statusInvalidConfig"), "err");
     setSettingsVisibility(true);
     appendRow(String(error?.message || error), { system: true });
     return;
@@ -395,24 +533,28 @@ async function connect() {
   try {
     await clientApi.connect(options);
   } catch (error) {
-    setStatus("Erro de rede", "err");
+    setStatus(t("statusNetworkError"), "err");
     appendRow(String(error?.message || error), { system: true });
     applyStatusSnapshot({ state: "error" });
     return;
   }
 
   if (wsUrl) {
-    appendRow(`Conectado em ${wsUrl}`, { system: true });
+    appendRow(t("systemConnectedTo", { url: wsUrl }), { system: true });
   }
 }
 
 function bootstrap() {
   const saved = loadSettings();
   const fromUrl = readUrlSettings();
+  const browserLocale = Array.isArray(navigator.languages) && navigator.languages.length > 0
+    ? navigator.languages[0]
+    : navigator.language;
 
   elements.host.value = String(fromUrl.host || saved.host || "127.0.0.1");
   elements.port.value = String(fromUrl.port || saved.port || 5443);
   elements.token.value = String(fromUrl.token || saved.token || "");
+  state.locale = normalizeLocale(fromUrl.lang || saved.locale || browserLocale || FALLBACK_LOCALE);
   state.chatScale = clamp(Number(saved.chatScale || 1), CHAT_SCALE_MIN, CHAT_SCALE_MAX);
   state.transparencyPercent = clamp(
     Number(saved.transparencyPercent || 0),
@@ -420,6 +562,8 @@ function bootstrap() {
     TRANSPARENCY_MAX,
   );
   state.showTimestamp = typeof saved.showTimestamp === "boolean" ? saved.showTimestamp : true;
+  applyLocaleToUi();
+  applyStatusSnapshot({ state: state.connectionState });
   applyChatPreferences();
   registerClientListeners();
 
@@ -446,6 +590,9 @@ function bootstrap() {
   elements.transparencyRange.addEventListener("input", (event) => {
     setTransparencyPercent(Number(event.target.value));
   });
+  elements.languageSelect.addEventListener("change", (event) => {
+    setLocale(String(event.target.value || FALLBACK_LOCALE));
+  });
   elements.showTimestampToggle.addEventListener("change", (event) => {
     setShowTimestamp(!!event.target.checked);
   });
@@ -463,7 +610,7 @@ function bootstrap() {
     }
   });
 
-  appendRow("Dock pronto. Use o botao de configuracoes (⚙) para editar conexao.", { system: true });
+  appendRow(t("systemReady"), { system: true });
   setSettingsVisibility(false);
 
   if (fromUrl.autoConnect && String(elements.token.value || "").trim()) {
