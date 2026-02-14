@@ -1,0 +1,37 @@
+{
+  "name": "@reino-doce/streaming-chat-webclient-gui",
+  "version": "0.1.0",
+  "description": "Standalone Electron Chat Dock GUI for streaming chat webclient.",
+  "license": "ISC",
+  "author": "Reino Doce",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reino-Doce/streaming-chat-webclient.git",
+    "directory": "packages/streaming-chat-webclient-gui"
+  },
+  "bugs": {
+    "url": "https://github.com/Reino-Doce/streaming-chat-webclient/issues"
+  },
+  "homepage": "https://github.com/Reino-Doce/streaming-chat-webclient/tree/main/packages/streaming-chat-webclient-gui#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "commonjs",
+  "main": "src/main.cjs",
+  "files": [
+    "src",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "smoke": "node -e \"require('./src/launch-options.cjs')\""
+  },
+  "dependencies": {
+    "@reino-doce/streaming-chat-webclient": "^0.1.0"
+  },
+  "devDependencies": {
+    "electron": "^40.1.0",
+    "vitest": "^4.0.18"
+  }
+}

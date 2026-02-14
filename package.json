@@ -1,0 +1,50 @@
+{
+  "name": "@reino-doce/streaming-chat-webclient",
+  "version": "0.1.0",
+  "description": "Reusable WS/XMPP chat client for streaming-chat-webservice consumers.",
+  "license": "ISC",
+  "author": "Reino Doce",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reino-Doce/streaming-chat-webclient.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Reino-Doce/streaming-chat-webclient/issues"
+  },
+  "homepage": "https://github.com/Reino-Doce/streaming-chat-webclient#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "commonjs",
+  "main": "src/index.cjs",
+  "types": "index.d.ts",
+  "workspaces": [
+    ".",
+    "packages/streaming-chat-webclient-cli",
+    "packages/streaming-chat-webclient-gui"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./src/index.cjs",
+      "import": "./index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "index.d.ts",
+    "index.mjs",
+    "LICENSE",
+    "README.md"
+  ],
+  "dependencies": {
+    "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.0.18"
+  }
+}
