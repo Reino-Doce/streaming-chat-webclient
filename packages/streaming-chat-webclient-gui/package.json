@@ -1,6 +1,6 @@
 {
   "name": "@reino-doce/streaming-chat-webclient-gui",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Standalone Electron Chat Dock GUI for streaming chat webclient.",
   "license": "ISC",
   "author": "Reino Doce",
