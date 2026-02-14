@@ -185,11 +185,18 @@ function stopManualResize() {
 
 function startManualResize(event) {
   event.preventDefault();
+  event.stopPropagation();
   state.resizing = true;
   state.resizeStartX = event.clientX;
   state.resizeStartY = event.clientY;
   state.resizeStartWidth = window.outerWidth;
   state.resizeStartHeight = window.outerHeight;
+
+  if (event.target && typeof event.target.setPointerCapture === "function") {
+    try {
+      event.target.setPointerCapture(event.pointerId);
+    } catch {}
+  }
 
   if (document.body) {
     document.body.style.cursor = "nwse-resize";
