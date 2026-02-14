@@ -3,7 +3,12 @@
 import { describe, expect, it } from "vitest";
 import webclientPackage from "../src/index.cjs";
 
-const { createStreamingChatWebClient } = webclientPackage;
+const {
+  createStreamingChatWebClient,
+  STATUS_DETAIL_CODES,
+  SYSTEM_EVENT_CODES,
+  ERROR_EVENT_CODES,
+} = webclientPackage;
 
 class MockSocket {
   constructor(url, protocol) {
@@ -159,6 +164,7 @@ describe("webclient", () => {
     expect(chats[0].author).toBe("alice");
     expect(chats[0].message).toBe("hello dock");
     expect(statuses).toContain("connected");
+    expect(client.getStatus().detailCode).toBe(STATUS_DETAIL_CODES.SESSION_BOUND);
 
     await client.disconnect();
   });
@@ -166,6 +172,7 @@ describe("webclient", () => {
   it("emits error status when socket fails", async () => {
     let socket = null;
     const errors = [];
+    const systems = [];
 
     const client = createStreamingChatWebClient({
       webSocketFactory: (url, protocol) => {
@@ -175,13 +182,19 @@ describe("webclient", () => {
     });
 
     client.onError((event) => errors.push(event));
+    client.onSystem((event) => systems.push(event));
 
     const connectPromise = client.connect({ token: "abc" });
     socket.fail(new Error("boom"));
 
-    await expect(connectPromise).rejects.toThrow("Erro de websocket.");
+    await expect(connectPromise).rejects.toMatchObject({
+      code: ERROR_EVENT_CODES.WEBSOCKET_ERROR,
+    });
     expect(errors).toHaveLength(1);
+    expect(errors[0].code).toBe(ERROR_EVENT_CODES.WEBSOCKET_ERROR);
+    expect(systems.some((event) => event.code === SYSTEM_EVENT_CODES.WEBSOCKET_ERROR)).toBe(true);
     expect(client.getStatus().state).toBe("error");
+    expect(client.getStatus().detailCode).toBe(STATUS_DETAIL_CODES.WEBSOCKET_ERROR);
   });
 
   it("handles DOM-style message events with data getter", async () => {
@@ -223,6 +236,7 @@ describe("webclient", () => {
     expect(chats[0].author).toBe("alice");
     expect(chats[0].message).toBe("hello dom");
     expect(statuses).toContain("connected");
+    expect(client.getStatus().detailCode).toBe(STATUS_DETAIL_CODES.SESSION_BOUND);
 
     await client.disconnect();
   });

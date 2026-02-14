@@ -1,3 +1,5 @@
+const { STATUS_DETAIL_CODES, SYSTEM_EVENT_CODES } = require("./event-codes.cjs");
+
 function decodeXmlEntities(value) {
   return String(value ?? "")
     .replace(/&lt;/g, "<")
@@ -9,7 +11,7 @@ function decodeXmlEntities(value) {
 
 function decodeAuthorFromFromField(fromValue) {
   const normalized = String(fromValue || "").trim();
-  if (!normalized) return "desconhecido";
+  if (!normalized) return "unknown";
   const slashIndex = normalized.lastIndexOf("/");
   if (slashIndex < 0 || slashIndex === normalized.length - 1) return normalized;
   return normalized.slice(slashIndex + 1);
@@ -62,29 +64,29 @@ function createXmppHandshakeMachine({ sendFrame, onState, onSystem }) {
       if (!authSent) {
         sendFrame('<auth mechanism="PLAIN">dock</auth>');
         authSent = true;
-        onState("authenticating", "Aguardando autenticacao...");
-        onSystem("Autenticando...");
+        onState("authenticating", STATUS_DETAIL_CODES.WAITING_AUTHENTICATION);
+        onSystem(SYSTEM_EVENT_CODES.AUTHENTICATING);
         return;
       }
 
       if (authDone && !bindSent) {
         sendFrame("<iq><bind/></iq>");
         bindSent = true;
-        onState("binding", "Aguardando bind...");
-        onSystem("Vinculando sessao...");
+        onState("binding", STATUS_DETAIL_CODES.WAITING_BINDING);
+        onSystem(SYSTEM_EVENT_CODES.BINDING_SESSION);
       }
       return;
     }
 
     if (lower.includes("<success")) {
       authDone = true;
-      onSystem("Autenticado.");
+      onSystem(SYSTEM_EVENT_CODES.AUTHENTICATED);
       return;
     }
 
     if (lower.includes("<iq") && lower.includes("<bind")) {
-      onState("connected", "Sessao vinculada.");
-      onSystem("Conectado ao chat.");
+      onState("connected", STATUS_DETAIL_CODES.SESSION_BOUND);
+      onSystem(SYSTEM_EVENT_CODES.CONNECTED_TO_CHAT);
     }
   }
 

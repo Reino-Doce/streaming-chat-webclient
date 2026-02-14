@@ -1,5 +1,12 @@
 const { sanitizeConnectionOptions, buildWsUrl } = require("./options.cjs");
 const { parseXmppChatMessage, createXmppHandshakeMachine } = require("./xmpp.cjs");
+const {
+  STATUS_DETAIL_CODES,
+  SYSTEM_EVENT_CODES,
+  ERROR_EVENT_CODES,
+  createCodedError,
+  normalizeArgs,
+} = require("./event-codes.cjs");
 
 function asString(value, fallback = "") {
   const text = String(value ?? fallback);
@@ -105,7 +112,9 @@ function createStreamingChatWebClient(args = {}) {
     state: "disconnected",
     at: now(),
     wsUrl: "",
-    detail: "",
+    detail: STATUS_DETAIL_CODES.DISCONNECTED,
+    detailCode: STATUS_DETAIL_CODES.DISCONNECTED,
+    detailArgs: {},
   };
 
   function emit(kind, payload) {
@@ -119,32 +128,39 @@ function createStreamingChatWebClient(args = {}) {
     }
   }
 
-  function setStatus(state, detail = "") {
+  function setStatus(state, detailCode = "", detailArgs = {}) {
+    const nextDetailCode = asString(detailCode, "").trim();
     status = {
       ...status,
       state,
-      detail: asString(detail, "").trim(),
+      detail: nextDetailCode,
+      detailCode: nextDetailCode,
+      detailArgs: normalizeArgs(detailArgs),
       at: now(),
     };
     emit("status", { ...status });
   }
 
-  function emitSystem(message) {
-    const text = asString(message, "").trim();
-    if (!text) return;
+  function emitSystem(code, args = {}) {
+    const normalizedCode = asString(code, "").trim();
+    if (!normalizedCode) return;
     emit("system", {
       at: now(),
-      message: text,
+      code: normalizedCode,
+      args: normalizeArgs(args),
+      message: normalizedCode,
     });
   }
 
-  function emitError(error, fatal = false) {
-    const message = asString(error?.message ?? error, "Erro de websocket.").trim() || "Erro de websocket.";
+  function emitError(code, args = {}, rawError = null, fatal = false) {
+    const normalizedCode = asString(code, ERROR_EVENT_CODES.UNKNOWN).trim() || ERROR_EVENT_CODES.UNKNOWN;
     emit("error", {
       at: now(),
-      message,
+      code: normalizedCode,
+      args: normalizeArgs(args),
+      message: normalizedCode,
       fatal: !!fatal,
-      raw: error,
+      raw: rawError,
     });
   }
 
@@ -182,9 +198,9 @@ function createStreamingChatWebClient(args = {}) {
       }
     }
 
-    setStatus("disconnected", "Desconectado");
+    setStatus("disconnected", STATUS_DETAIL_CODES.DISCONNECTED);
     if (!silent) {
-      emitSystem("Desconectado.");
+      emitSystem(SYSTEM_EVENT_CODES.DISCONNECTED);
     }
   }
 
@@ -202,8 +218,8 @@ function createStreamingChatWebClient(args = {}) {
       ...status,
       wsUrl,
     };
-    setStatus("connecting", "Conectando...");
-    emitSystem(`Conectando em ${wsUrl}`);
+    setStatus("connecting", STATUS_DETAIL_CODES.CONNECTING);
+    emitSystem(SYSTEM_EVENT_CODES.CONNECTING, { url: wsUrl });
 
     return new Promise((resolve, reject) => {
       let settled = false;
@@ -224,9 +240,9 @@ function createStreamingChatWebClient(args = {}) {
       try {
         createdSocket = webSocketFactory(wsUrl, options.protocol);
       } catch (error) {
-        setStatus("error", "Falha ao criar socket.");
-        emitError(error, true);
-        rejectOnce(error);
+        setStatus("error", STATUS_DETAIL_CODES.SOCKET_CREATE_FAILED);
+        emitError(ERROR_EVENT_CODES.SOCKET_CREATE_FAILED, {}, error, true);
+        rejectOnce(createCodedError(ERROR_EVENT_CODES.SOCKET_CREATE_FAILED));
         return;
       }
 
@@ -234,20 +250,20 @@ function createStreamingChatWebClient(args = {}) {
 
       const handshake = createXmppHandshakeMachine({
         sendFrame: safeSendFrame,
-        onState: (nextState, detail) => {
+        onState: (nextState, detailCode, detailArgs = {}) => {
           if (attemptId !== connectAttempt || socket !== createdSocket) return;
-          setStatus(nextState, detail);
+          setStatus(nextState, detailCode, detailArgs);
         },
-        onSystem: (message) => {
+        onSystem: (code, codeArgs = {}) => {
           if (attemptId !== connectAttempt || socket !== createdSocket) return;
-          emitSystem(message);
+          emitSystem(code, codeArgs);
         },
       });
 
       socketDetach = [
         attachSocketEvent(createdSocket, "open", () => {
           if (attemptId !== connectAttempt || socket !== createdSocket) return;
-          setStatus("socket-open", "Socket aberto.");
+          setStatus("socket-open", STATUS_DETAIL_CODES.SOCKET_OPEN);
           resolveOnce();
         }),
         attachSocketEvent(createdSocket, "message", (event, isBinary) => {
@@ -275,23 +291,24 @@ function createStreamingChatWebClient(args = {}) {
           handshake.reset();
 
           const closeCode = Number(event?.code);
-          const codeText = Number.isFinite(closeCode) ? String(closeCode) : "desconhecido";
-          setStatus("disconnected", `Socket fechado (${codeText}).`);
-          emitSystem(`Socket fechado (${codeText}).`);
+          const codeText = Number.isFinite(closeCode) ? String(closeCode) : "unknown";
+          const closeArgs = { code: codeText };
+          setStatus("disconnected", STATUS_DETAIL_CODES.SOCKET_CLOSED, closeArgs);
+          emitSystem(SYSTEM_EVENT_CODES.SOCKET_CLOSED, closeArgs);
 
           if (!settled) {
-            rejectOnce(new Error(`Socket fechado (${codeText}).`));
+            rejectOnce(createCodedError(ERROR_EVENT_CODES.SOCKET_CLOSED, closeArgs));
           }
         }),
         attachSocketEvent(createdSocket, "error", (error) => {
           if (attemptId !== connectAttempt || socket !== createdSocket) return;
 
-          setStatus("error", "Erro de websocket.");
-          emitSystem("Erro de websocket.");
-          emitError(error, false);
+          setStatus("error", STATUS_DETAIL_CODES.WEBSOCKET_ERROR);
+          emitSystem(SYSTEM_EVENT_CODES.WEBSOCKET_ERROR);
+          emitError(ERROR_EVENT_CODES.WEBSOCKET_ERROR, {}, error, false);
 
           if (!settled) {
-            rejectOnce(new Error("Erro de websocket."));
+            rejectOnce(createCodedError(ERROR_EVENT_CODES.WEBSOCKET_ERROR));
           }
         }),
       ];

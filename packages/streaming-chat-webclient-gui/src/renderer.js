@@ -41,7 +41,20 @@ const TRANSLATIONS = {
     statusClientUnavailable: "Client unavailable",
     systemReady: "Dock ready. Use settings (⚙) to edit connection.",
     systemClientUnavailable: "Chat client is unavailable in this window.",
+    systemConnectingTo: "Connecting to {url}",
+    systemDisconnected: "Disconnected.",
+    systemAuthenticating: "Authenticating...",
+    systemBindingSession: "Binding session...",
+    systemAuthenticated: "Authenticated.",
+    systemConnectedToChat: "Connected to chat.",
+    systemSocketClosed: "Socket closed ({code}).",
+    systemWebSocketError: "WebSocket error.",
     systemConnectedTo: "Connected to {url}",
+    errorTokenRequired: "Token is required.",
+    errorSocketCreateFailed: "Failed to create WebSocket.",
+    errorSocketClosed: "Socket closed ({code}).",
+    errorWebSocketError: "WebSocket error.",
+    errorUnknown: "Unknown error.",
     unknownAuthor: "unknown",
   },
   "pt-BR": {
@@ -75,7 +88,20 @@ const TRANSLATIONS = {
     statusClientUnavailable: "Cliente indisponivel",
     systemReady: "Dock pronto. Use o botao de configuracoes (⚙) para editar conexao.",
     systemClientUnavailable: "Cliente de chat indisponivel nesta janela.",
+    systemConnectingTo: "Conectando em {url}",
+    systemDisconnected: "Desconectado.",
+    systemAuthenticating: "Autenticando...",
+    systemBindingSession: "Vinculando sessao...",
+    systemAuthenticated: "Autenticado.",
+    systemConnectedToChat: "Conectado ao chat.",
+    systemSocketClosed: "Socket fechado ({code}).",
+    systemWebSocketError: "Erro de websocket.",
     systemConnectedTo: "Conectado em {url}",
+    errorTokenRequired: "Token obrigatorio.",
+    errorSocketCreateFailed: "Falha ao criar socket.",
+    errorSocketClosed: "Socket fechado ({code}).",
+    errorWebSocketError: "Erro de websocket.",
+    errorUnknown: "Erro desconhecido.",
     unknownAuthor: "desconhecido",
   },
 };
@@ -83,6 +109,54 @@ const TRANSLATIONS = {
 const clientApi = window.chatDockClient && typeof window.chatDockClient === "object"
   ? window.chatDockClient
   : null;
+
+const DEFAULT_SYSTEM_CODES = {
+  CONNECTING: "system.connecting",
+  DISCONNECTED: "system.disconnected",
+  AUTHENTICATING: "system.authenticating",
+  BINDING_SESSION: "system.binding_session",
+  AUTHENTICATED: "system.authenticated",
+  CONNECTED_TO_CHAT: "system.connected_to_chat",
+  SOCKET_CLOSED: "system.socket_closed",
+  WEBSOCKET_ERROR: "system.websocket_error",
+};
+
+const DEFAULT_ERROR_CODES = {
+  TOKEN_REQUIRED: "error.token_required",
+  SOCKET_CREATE_FAILED: "error.socket_create_failed",
+  SOCKET_CLOSED: "error.socket_closed",
+  WEBSOCKET_ERROR: "error.websocket_error",
+  UNKNOWN: "error.unknown",
+};
+
+const SYSTEM_CODES = {
+  ...DEFAULT_SYSTEM_CODES,
+  ...((clientApi && clientApi.codes && clientApi.codes.system) || {}),
+};
+
+const ERROR_CODES = {
+  ...DEFAULT_ERROR_CODES,
+  ...((clientApi && clientApi.codes && clientApi.codes.error) || {}),
+};
+
+const SYSTEM_CODE_TO_TRANSLATION_KEY = {
+  [SYSTEM_CODES.CONNECTING]: "systemConnectingTo",
+  [SYSTEM_CODES.DISCONNECTED]: "systemDisconnected",
+  [SYSTEM_CODES.AUTHENTICATING]: "systemAuthenticating",
+  [SYSTEM_CODES.BINDING_SESSION]: "systemBindingSession",
+  [SYSTEM_CODES.AUTHENTICATED]: "systemAuthenticated",
+  [SYSTEM_CODES.CONNECTED_TO_CHAT]: "systemConnectedToChat",
+  [SYSTEM_CODES.SOCKET_CLOSED]: "systemSocketClosed",
+  [SYSTEM_CODES.WEBSOCKET_ERROR]: "systemWebSocketError",
+};
+
+const ERROR_CODE_TO_TRANSLATION_KEY = {
+  [ERROR_CODES.TOKEN_REQUIRED]: "errorTokenRequired",
+  [ERROR_CODES.SOCKET_CREATE_FAILED]: "errorSocketCreateFailed",
+  [ERROR_CODES.SOCKET_CLOSED]: "errorSocketClosed",
+  [ERROR_CODES.WEBSOCKET_ERROR]: "errorWebSocketError",
+  [ERROR_CODES.UNKNOWN]: "errorUnknown",
+};
 
 const elements = {
   dock: document.querySelector(".dock"),
@@ -168,6 +242,26 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function asObject(value, fallback = {}) {
+  return value && typeof value === "object" ? value : fallback;
+}
+
+function asString(value, fallback = "") {
+  const text = String(value ?? fallback);
+  return text === "undefined" || text === "null" ? fallback : text;
+}
+
+function normalizeTemplateVars(args) {
+  const values = asObject(args, {});
+  const normalized = {};
+
+  for (const [key, value] of Object.entries(values)) {
+    normalized[key] = asString(value, "");
+  }
+
+  return normalized;
+}
+
 function normalizeLocale(value) {
   const raw = String(value || "").trim().toLowerCase();
   if (!raw) return FALLBACK_LOCALE;
@@ -184,6 +278,44 @@ function t(key, vars = {}) {
   return String(template).replace(/\{([a-zA-Z0-9_]+)\}/g, (match, token) => (
     Object.prototype.hasOwnProperty.call(vars, token) ? String(vars[token]) : match
   ));
+}
+
+function renderSystemMessage(event) {
+  const code = asString(event?.code, "").trim();
+  const translationKey = SYSTEM_CODE_TO_TRANSLATION_KEY[code];
+  if (translationKey) {
+    return t(translationKey, normalizeTemplateVars(event?.args));
+  }
+
+  const message = asString(event?.message, "").trim();
+  if (!message) return code;
+
+  const messageTranslationKey = SYSTEM_CODE_TO_TRANSLATION_KEY[message];
+  if (messageTranslationKey) {
+    return t(messageTranslationKey, normalizeTemplateVars(event?.args));
+  }
+
+  return message;
+}
+
+function renderErrorMessage(errorLike) {
+  const code = asString(errorLike?.code, "").trim();
+  const translationKey = ERROR_CODE_TO_TRANSLATION_KEY[code];
+  if (translationKey) {
+    return t(translationKey, normalizeTemplateVars(errorLike?.args));
+  }
+
+  const message = asString(errorLike?.message ?? errorLike, "").trim();
+  if (!message) {
+    return t("errorUnknown");
+  }
+
+  const messageTranslationKey = ERROR_CODE_TO_TRANSLATION_KEY[message];
+  if (messageTranslationKey) {
+    return t(messageTranslationKey, normalizeTemplateVars(errorLike?.args));
+  }
+
+  return message;
 }
 
 function applyLocaleToUi() {
@@ -458,7 +590,7 @@ function registerClientListeners() {
 
   if (typeof clientApi.onSystem === "function") {
     state.unsubscribers.push(clientApi.onSystem((event) => {
-      const message = String(event?.message || "").trim();
+      const message = renderSystemMessage(event);
       if (!message) return;
       appendRow(message, { system: true });
     }));
@@ -466,7 +598,10 @@ function registerClientListeners() {
 
   if (typeof clientApi.onChat === "function") {
     state.unsubscribers.push(clientApi.onChat((event) => {
-      const author = String(event?.author || "").trim() || t("unknownAuthor");
+      const rawAuthor = String(event?.author || "").trim();
+      const author = !rawAuthor || rawAuthor.toLowerCase() === "unknown"
+        ? t("unknownAuthor")
+        : rawAuthor;
       const message = String(event?.message || "").trim();
       if (!message) return;
       appendRow(message, { author });
@@ -475,7 +610,7 @@ function registerClientListeners() {
 
   if (typeof clientApi.onError === "function") {
     state.unsubscribers.push(clientApi.onError((event) => {
-      const message = String(event?.message || "").trim();
+      const message = renderErrorMessage(event);
       if (!message) return;
       appendRow(message, { system: true });
     }));
@@ -524,7 +659,7 @@ async function connect() {
   } catch (error) {
     setStatus(t("statusInvalidConfig"), "err");
     setSettingsVisibility(true);
-    appendRow(String(error?.message || error), { system: true });
+    appendRow(renderErrorMessage(error), { system: true });
     return;
   }
 
@@ -534,7 +669,7 @@ async function connect() {
     await clientApi.connect(options);
   } catch (error) {
     setStatus(t("statusNetworkError"), "err");
-    appendRow(String(error?.message || error), { system: true });
+    appendRow(renderErrorMessage(error), { system: true });
     applyStatusSnapshot({ state: "error" });
     return;
   }
@@ -569,7 +704,7 @@ function bootstrap() {
 
   elements.connectBtn.addEventListener("click", () => {
     connect().catch((error) => {
-      appendRow(String(error?.message || error), { system: true });
+      appendRow(renderErrorMessage(error), { system: true });
     });
   });
   elements.settingsBtn.addEventListener("click", () => {
@@ -617,7 +752,7 @@ function bootstrap() {
     setTimeout(() => {
       if (isClientBusy()) return;
       connect().catch((error) => {
-        appendRow(String(error?.message || error), { system: true });
+        appendRow(renderErrorMessage(error), { system: true });
       });
     }, 500);
   }

@@ -5,6 +5,9 @@ export const {
   sanitizeConnectionOptions,
   buildWsUrl,
   parseXmppChatMessage,
+  STATUS_DETAIL_CODES,
+  SYSTEM_EVENT_CODES,
+  ERROR_EVENT_CODES,
 } = cjsModule;
 
 export default cjsModule;

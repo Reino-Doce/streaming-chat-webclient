@@ -3,6 +3,9 @@ const {
   createStreamingChatWebClient,
   sanitizeConnectionOptions,
   buildWsUrl,
+  STATUS_DETAIL_CODES,
+  SYSTEM_EVENT_CODES,
+  ERROR_EVENT_CODES,
 } = require("@reino-doce/streaming-chat-webclient");
 
 const listeners = {
@@ -55,4 +58,9 @@ contextBridge.exposeInMainWorld("chatDockClient", {
   onSystem: (callback) => registerListener("system", callback),
   onChat: (callback) => registerListener("chat", callback),
   onError: (callback) => registerListener("error", callback),
+  codes: {
+    statusDetail: STATUS_DETAIL_CODES,
+    system: SYSTEM_EVENT_CODES,
+    error: ERROR_EVENT_CODES,
+  },
 });

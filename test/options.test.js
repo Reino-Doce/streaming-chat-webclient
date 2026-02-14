@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import webclientPackage from "../src/index.cjs";
 
-const { sanitizeConnectionOptions, buildWsUrl } = webclientPackage;
+const { sanitizeConnectionOptions, buildWsUrl, ERROR_EVENT_CODES } = webclientPackage;
 
 describe("webclient options", () => {
   it("normalizes host/port/token and autoConnect", () => {
@@ -34,6 +34,11 @@ describe("webclient options", () => {
   });
 
   it("throws when token is missing", () => {
-    expect(() => buildWsUrl({ host: "127.0.0.1", port: 5443 })).toThrow("Token obrigatorio.");
+    try {
+      buildWsUrl({ host: "127.0.0.1", port: 5443 });
+      throw new Error("expected buildWsUrl to throw");
+    } catch (error) {
+      expect(error.code).toBe(ERROR_EVENT_CODES.TOKEN_REQUIRED);
+    }
   });
 });

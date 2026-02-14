@@ -5,6 +5,7 @@ const DEFAULT_CONNECTION_OPTIONS = {
   autoConnect: false,
   protocol: "xmpp",
 };
+const { ERROR_EVENT_CODES, createCodedError } = require("./event-codes.cjs");
 
 function asObject(value, fallback = {}) {
   return value && typeof value === "object" ? value : fallback;
@@ -54,7 +55,7 @@ function sanitizeConnectionOptions(rawOptions = {}, defaults = {}) {
 function buildWsUrl(options = {}) {
   const normalized = sanitizeConnectionOptions(options);
   if (!normalized.token) {
-    throw new Error("Token obrigatorio.");
+    throw createCodedError(ERROR_EVENT_CODES.TOKEN_REQUIRED);
   }
 
   const url = new URL(`ws://${normalized.host}:${normalized.port}/ws`);

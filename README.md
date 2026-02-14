@@ -22,6 +22,14 @@ npm install @reino-doce/streaming-chat-webclient
 - `sanitizeConnectionOptions(raw, defaults?)`
 - `buildWsUrl(options)`
 - `parseXmppChatMessage(xmlText)`
+- `STATUS_DETAIL_CODES`
+- `SYSTEM_EVENT_CODES`
+- `ERROR_EVENT_CODES`
+
+## Event Model
+
+Core runtime events (`onStatus`, `onSystem`, `onError`) emit stable `code` values plus optional `args`.
+Consumer apps (CLI/GUI/other integrations) should map these codes to localized text.
 
 ## Quick Example
 
